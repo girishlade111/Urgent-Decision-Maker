@@ -1,0 +1,150 @@
+import { useState, useRef, useEffect } from 'react'
+import { Button } from "/components/ui/button"
+import { Input } from "/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "/components/ui/card"
+import { X, Plus } from "lucide-react"
+
+export default function DecisionMaker() {
+  const [options, setOptions] = useState<string[]>(['Yes', 'No', 'Maybe'])
+  const [newOption, setNewOption] = useState('')
+  const [selectedOption, setSelectedOption] = useState<string | null>(null)
+  const [isSpinning, setIsSpinning] = useState(false)
+  const [rotation, setRotation] = useState(0)
+  const wheelRef = useRef<HTMLDivElement>(null)
+
+  const addOption = () => {
+    if (newOption.trim() && !options.includes(newOption.trim())) {
+      setOptions([...options, newOption.trim()])
+      setNewOption('')
+    }
+  }
+
+  const removeOption = (optionToRemove: string) => {
+    setOptions(options.filter(option => option !== optionToRemove))
+  }
+
+  const spinWheel = () => {
+    if (options.length < 2) return
+    
+    setIsSpinning(true)
+    setSelectedOption(null)
+    
+    // Random number of full rotations (5-10) plus a random segment
+    const spins = 5 + Math.floor(Math.random() * 5)
+    const segmentAngle = 360 / options.length
+    const randomSegment = Math.floor(Math.random() * options.length)
+    const finalRotation = spins * 360 + (randomSegment * segmentAngle)
+    
+    setRotation(prev => prev + finalRotation)
+    
+    setTimeout(() => {
+      setIsSpinning(false)
+      setSelectedOption(options[randomSegment])
+    }, 3000) // Match this with CSS animation duration
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      addOption()
+    }
+  }
+
+  return (
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold">Decision Maker</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex gap-2">
+          <Input
+            value={newOption}
+            onChange={(e) => setNewOption(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Add new option"
+          />
+          <Button onClick={addOption} size="icon">
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {options.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="font-medium">Options:</h3>
+            <div className="flex flex-wrap gap-2">
+              {options.map((option) => (
+                <div key={option} className="flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-full">
+                  <span>{option}</span>
+                  <button 
+                    onClick={() => removeOption(option)}
+                    className="text-gray-500 hover:text-red-500"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="relative h-64 w-64 mx-auto my-8">
+          <div 
+            ref={wheelRef}
+            className="absolute inset-0 rounded-full border-8 border-gray-200 overflow-hidden transition-transform duration-3000 ease-out"
+            style={{
+              transform: `rotate(${rotation}deg)`,
+              background: `conic-gradient(${options.map((_, i) => {
+                const hue = (i * 360 / options.length) % 360
+                return `hsl(${hue}, 80%, 70%) ${i * 100 / options.length}% ${(i + 1) * 100 / options.length}%`
+              }).join(', ')})`
+            }}
+          >
+            {options.map((option, i) => (
+              <div 
+                key={option}
+                className="absolute inset-0 flex items-center justify-center"
+                style={{
+                  transform: `rotate(${i * 360 / options.length + 180 / options.length}deg)`,
+                  width: '100%',
+                  height: '100%'
+                }}
+              >
+                <span 
+                  className="text-xs font-bold absolute left-1/2 top-0 origin-left"
+                  style={{
+                    transform: 'rotate(90deg)',
+                    transformOrigin: 'left center',
+                    width: '40%'
+                  }}
+                >
+                  {option}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-red-500 rounded-full z-10"></div>
+        </div>
+
+        <div className="text-center">
+          <Button 
+            onClick={spinWheel} 
+            disabled={isSpinning || options.length < 2}
+            className="w-full"
+          >
+            {isSpinning ? 'Spinning...' : 'Spin the Wheel'}
+          </Button>
+        </div>
+
+        {selectedOption && !isSpinning && (
+          <div className="text-center p-4 bg-green-100 rounded-lg">
+            <p className="font-bold">Decision:</p>
+            <p className="text-xl">{selectedOption}</p>
+          </div>
+        )}
+
+        {options.length < 2 && (
+          <p className="text-center text-gray-500">Add at least 2 options to spin the wheel</p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
